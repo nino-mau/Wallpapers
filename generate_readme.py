@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Generate a README gallery from wallpaper theme directories."""
 
+from html import escape
 from pathlib import Path
 from urllib.parse import quote
 
@@ -14,22 +15,21 @@ def title(value: str) -> str:
     return value.replace("-", " ").replace("_", " ").title()
 
 
-def image_link(path: Path) -> str:
+def image_cell(path: Path) -> str:
     relative_path = path.relative_to(ROOT).as_posix()
-    url = quote(relative_path, safe="/")
-    name = path.stem.replace("-", " ").replace("_", " ")
-    return f"[![{name}]({url})]({url})"
+    url = escape(quote(relative_path, safe="/"), quote=True)
+    name = escape(path.stem.replace("-", " ").replace("_", " "), quote=True)
+    return f'<td><a href="{url}"><img alt="{name}" src="{url}"></a></td>'
 
 
 def gallery(images: list[Path]) -> list[str]:
-    lines = ["| " + " | ".join(["Wallpaper"] * COLUMNS) + " |"]
-    lines.append("| " + " | ".join(["---"] * COLUMNS) + " |")
+    lines = ["<table>"]
 
     for start in range(0, len(images), COLUMNS):
-        row = [image_link(image) for image in images[start : start + COLUMNS]]
-        row.extend([""] * (COLUMNS - len(row)))
-        lines.append("| " + " | ".join(row) + " |")
+        row = [image_cell(image) for image in images[start : start + COLUMNS]]
+        lines.append("  <tr>" + "".join(row) + "</tr>")
 
+    lines.append("</table>")
     return lines
 
 
@@ -49,7 +49,9 @@ def main() -> None:
             (
                 path
                 for path in directory.rglob("*")
-                if path.is_file() and path.suffix.lower() in IMAGE_EXTENSIONS
+                if path.is_file()
+                and path.suffix.lower() in IMAGE_EXTENSIONS
+                and not path.stem.casefold().endswith("-colorful")
             ),
             key=lambda path: path.as_posix().casefold(),
         )
